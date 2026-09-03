@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
  * barcode scanner) is the standard, widely-documented pattern for this
  * exact combination.
  */
-@OptIn(ExperimentalGetImage::class)
+@OptIn(ExperimentalGetImage::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(repository: Repository, onPaired: () -> Unit) {
     val context = LocalContext.current
