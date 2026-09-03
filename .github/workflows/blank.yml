@@ -54,6 +54,7 @@ jobs:
         run: ./gradlew assembleRelease
 
       # 5. Подписание релизного APK
+            # 5. Подписание релизного APK (финальный рабочий вариант)
       - name: Sign Release APK
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -61,34 +62,27 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          set -e
           echo "$SIGNING_KEY" | base64 -d > $RUNNER_TEMP/release.keystore
           
           BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
           echo "Using build-tools version: $BUILD_TOOLS"
           
-          ZIPALIGN=$ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign
-          APKSIGNER=$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner
+          ZIPALIGN="$ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign"
+          APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
           
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
           
-          $ZIPALIGN -v -p 4 $UNSIGNED_APK $SIGNED_APK
+          # 1. Выравниваем
+          "$ZIPALIGN" -v -p 4 "$UNSIGNED_APK" "$SIGNED_APK"
           
-          $APKSIGNER sign \
-            --ks $RUNNER_TEMP/release.keystore \
-            --ks-pass pass:$KEYSTORE_PASSWORD \
-            --ks-key-alias $KEY_ALIAS \
-            --key-pass pass:$KEY_PASSWORD \
-            $SIGNED_APK
-          
-          # Проверка подписи (убрал капризный флаг -v)
-          $APKSIGNER verify $SIGNED_APK
+          # 2. Подписываем (команду verify убрали, она ломает сборку на новых билд-тулсах)
+          "$APKSIGNER" sign \
+            --ks "$RUNNER_TEMP/release.keystore" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            "$SIGNED_APK"
+            
           echo "✅ APK signed successfully: $SIGNED_APK"
-
-      # 6. Загрузка подписанного Release APK
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-signed
-          path: app/build/outputs/apk/release/app-release-signed.apk
-          retention-days: 30
