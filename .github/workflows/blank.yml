@@ -63,10 +63,12 @@ jobs:
             -dname "CN=ClipSync, OU=Dev, O=ClipSync, L=City, ST=State, C=RU"
           
           BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
-          ZIPALIGN="$ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign"
           APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
           
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
           
-          "$ZIPALIGN" -f -p 4 "$UNSIGNED_APK"
+          # Подписываем напрямую, без zipalign (он не обязателен)
+          "$APKSIGNER" sign \
+            --ks "$RUNNER_TEMP/release.keystore" \
+            --ks
