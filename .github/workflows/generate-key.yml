@@ -1,0 +1,29 @@
+name: Generate Keystore
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Keystore
+        run: |
+          keytool -genkeypair -v \
+            -storetype JKS \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass MyStrongPassword123 \
+            -keypass MyStrongPassword123 \
+            -alias my-key \
+            -keystore my-release-key.jks \
+            -dname "CN=ClipSync, OU=Dev, O=ClipSync, L=City, ST=State, C=RU"
+          
+          echo "✅ Keystore создан!"
+          ls -lh my-release-key.jks
+      
+      - name: Upload Keystore as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keystore-file
+          path: my-release-key.jks
+          retention-days: 30
