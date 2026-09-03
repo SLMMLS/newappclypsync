@@ -1,16 +1,19 @@
-name: Build APK
+name: Android CI/CD
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build, Test and Release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -19,17 +22,51 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # Официальный экшен для настройки Gradle и автоматического кеширования зависимостей
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 1. Проверка кода (опционально, но рекомендуется)
+      - name: Run Lint
+        run: ./gradlew lintDebug
+
+      # 2. Запуск Unit тестов (опционально)
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest
+
+      # 3. Сборка Debug APK (для тестирования)
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      # 4. Сборка Release APK (или bundleRelease для AAB)
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      # 5. Подписание релизного APK
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      # 6. Загрузка подписанного Release APK
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-signed
+          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+          retention-days: 30
