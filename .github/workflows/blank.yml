@@ -53,7 +53,7 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # 5. Подписание релизного APK (исправленный способ)
+      # 5. Подписание релизного APK
       - name: Sign Release APK
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -61,10 +61,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # Декодируем keystore во временный файл
           echo "$SIGNING_KEY" | base64 -d > $RUNNER_TEMP/release.keystore
           
-          # Находим последнюю установленную версию build-tools
           BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
           echo "Using build-tools version: $BUILD_TOOLS"
           
@@ -74,10 +72,8 @@ jobs:
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
           
-          # Выравнивание APK
           $ZIPALIGN -v -p 4 $UNSIGNED_APK $SIGNED_APK
           
-          # Подпись APK
           $APKSIGNER sign \
             --ks $RUNNER_TEMP/release.keystore \
             --ks-pass pass:$KEYSTORE_PASSWORD \
@@ -85,8 +81,8 @@ jobs:
             --key-pass pass:$KEY_PASSWORD \
             $SIGNED_APK
           
-          # Проверка подписи
-          $APKSIGNER verify -v $SIGNED_APK
+          # Проверка подписи (убрал капризный флаг -v)
+          $APKSIGNER verify $SIGNED_APK
           echo "✅ APK signed successfully: $SIGNED_APK"
 
       # 6. Загрузка подписанного Release APK
