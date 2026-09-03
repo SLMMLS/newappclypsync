@@ -12,6 +12,9 @@
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
     <application
         android:name=".ClipSyncApp"
         android:allowBackup="true"
