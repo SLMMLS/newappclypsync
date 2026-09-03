@@ -22,7 +22,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Официальный экшен для настройки Gradle и автоматического кеширования зависимостей
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -31,15 +30,15 @@ jobs:
           sed -i -e 's/\r$//' gradlew
           chmod +x gradlew
 
-      # 1. Проверка кода (опционально, но рекомендуется)
+      # 1. Проверка кода
       - name: Run Lint
         run: ./gradlew lintDebug
 
-      # 2. Запуск Unit тестов (опционально)
+      # 2. Запуск Unit тестов
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
-      # 3. Сборка Debug APK (для тестирования)
+      # 3. Сборка Debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
@@ -50,25 +49,50 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
 
-      # 4. Сборка Release APK (или bundleRelease для AAB)
+      # 4. Сборка Release APK
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # 5. Подписание релизного APK
+      # 5. Подписание релизного APK (исправленный способ)
       - name: Sign Release APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Декодируем keystore во временный файл
+          echo "$SIGNING_KEY" | base64 -d > $RUNNER_TEMP/release.keystore
+          
+          # Находим последнюю установленную версию build-tools
+          BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
+          echo "Using build-tools version: $BUILD_TOOLS"
+          
+          ZIPALIGN=$ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign
+          APKSIGNER=$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner
+          
+          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
+          
+          # Выравнивание APK
+          $ZIPALIGN -v -p 4 $UNSIGNED_APK $SIGNED_APK
+          
+          # Подпись APK
+          $APKSIGNER sign \
+            --ks $RUNNER_TEMP/release.keystore \
+            --ks-pass pass:$KEYSTORE_PASSWORD \
+            --ks-key-alias $KEY_ALIAS \
+            --key-pass pass:$KEY_PASSWORD \
+            $SIGNED_APK
+          
+          # Проверка подписи
+          $APKSIGNER verify -v $SIGNED_APK
+          echo "✅ APK signed successfully: $SIGNED_APK"
 
       # 6. Загрузка подписанного Release APK
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-signed
-          path: ${{steps.sign_app.outputs.signedReleaseFile}}
+          path: app/build/outputs/apk/release/app-release-signed.apk
           retention-days: 30
