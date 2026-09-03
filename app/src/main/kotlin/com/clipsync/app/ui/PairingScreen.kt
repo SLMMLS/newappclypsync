@@ -1,11 +1,11 @@
 package com.clipsync.app.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -31,7 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -50,7 +50,8 @@ import kotlinx.coroutines.launch
  * barcode scanner) is the standard, widely-documented pattern for this
  * exact combination.
  */
-@OptIn(ExperimentalGetImage::class, ExperimentalMaterial3Api::class)
+@SuppressLint("UnsafeOptInUsageError")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(repository: Repository, onPaired: () -> Unit) {
     val context = LocalContext.current
