@@ -53,22 +53,28 @@ jobs:
         run: |
           set -e
           
-          # GitHub сам создаёт ключ на своём сервере
-          keytool -genkeypair -v \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android123 \
-            -keypass android123 \
-            -alias my-key \
-            -keystore $RUNNER_TEMP/release.keystore \
-            -dname "CN=ClipSync, OU=Dev, O=ClipSync, L=City, ST=State, C=RU"
+          keytool -genkeypair -v -keyalg RSA -keysize 2048 -validity 10000 -storepass android123 -keypass android123 -alias my-key -keystore $RUNNER_TEMP/release.keystore -dname "CN=ClipSync, OU=Dev, O=ClipSync, L=City, ST=State, C=RU"
           
           BUILD_TOOLS=$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)
           APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
-          
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           SIGNED_APK="app/build/outputs/apk/release/app-release-signed.apk"
           
-          # Подписываем напрямую, без zipalign (он не обязателен)
-          "$APKSIGNER" sign \
-            --ks "$RUNNER_TEMP/release.keystore" \
-            --ks
+          echo "--- Проверка файлов ---"
+          ls -l "$RUNNER_TEMP/release.keystore"
+          ls -l "$UNSIGNED_APK"
+          echo "-----------------------"
+          
+          "$APKSIGNER" sign --ks="$RUNNER_TEMP/release.keystore" --ks-pass=pass:android123 --ks-key-alias=my-key --key-pass=pass:android123 --out="$SIGNED_APK" "$UNSIGNED_APK"
+          
+          cp "$RUNNER_TEMP/release.keystore" app/build/outputs/apk/release/release.keystore
+          echo "✅ APK подписан!"
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-signed
+          path: |
+            app/build/outputs/apk/release/app-release-signed.apk
+            app/build/outputs/apk/release/release.keystore
+          retention-days: 30
