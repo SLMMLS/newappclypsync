@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  This app talks HTTP, not HTTPS, to exactly one place: a paired PC on the
+  same local network (see ../../../../PROTOCOL.md). Android 9+ blocks all
+  cleartext traffic by default, which is what "CLEARTEXT communication ...
+  not permitted" means.
+
+  This is *not* the same as sending clipboard content in the clear: every
+  /push body is already AES-256-GCM-encrypted with a key derived from an
+  X25519 exchange specific to this device pair (see crypto/Identity.kt +
+  crypto/CryptoUtils.kt) before it ever touches OkHttp/NanoHTTPD. HTTP here
+  only supplies the framing (method, path, headers) around an already-
+  opaque ciphertext body - permitting it is a policy exception for the
+  transport, not a statement that the data itself is unprotected.
+
+  What this does NOT protect against, which real TLS would: a passive
+  observer on the same LAN can see that two devices are talking, how much
+  data, and when - traffic metadata, not content. See the PC-side README's
+  discussion of moving to self-signed TLS + certificate pinning if that
+  matters for your threat model.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
